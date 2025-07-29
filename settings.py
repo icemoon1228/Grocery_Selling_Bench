@@ -1,4 +1,7 @@
 # 商品常量定义
+from collections import defaultdict
+
+
 GOODS_LIST = [
     {"id": 0, "name": "小麦（中等）", "buy_price": 3.19, "sell_price": 5.9, "cate": "粮食"},
     {"id": 1, "name": "玉米（中等）", "buy_price": 2.52, "sell_price": 4.62, "cate": "粮食"},
@@ -21,9 +24,42 @@ GOODS_LIST = [
 ]
 N_GOODS = len(GOODS_LIST)
 MAX_TOTAL_INVENTORY = 1000  # 所有商品共享的最大库存总量 
-INITIAL_ITEM_NUMBER = 20
+INITIAL_ITEM_NUMBER = 30
 
+QUANTITY_LIST = [
+    500,  # 小麦（中等） - 主粮，需求大
+    450,  # 玉米（中等） - 主粮，家畜饲料常用
+    300,  # 大豆（中等） - 用途广，但价格较高
+    400,  # 籼米（中等） - 主粮，常用
+    150,  # 猪肉 - 消耗大，保鲜期短
+    60,   # 牛肉 - 单价高，需求相对少
+    60,   # 羊肉 - 同上
+    200,  # 鸡肉 - 性价比高，需求适中
+    250,  # 鸡蛋 - 常用食材，需求大
+    180,  # 草鱼 - 普通海鲜，适中需求
+    120,  # 鲤鱼 - 常见海鲜，适中
+    130,  # 鲢鱼 - 相对廉价，适中
+    300,  # 大白菜 - 冬季常用菜，便宜
+    220,  # 黄瓜 - 应季蔬菜
+    220,  # 西红柿 - 常见日常食材
+    160,  # 红富士苹果 - 水果但相对耐放
+    180,  # 香蕉 - 热门水果，但易坏
+    170   # 橙子 - 应季水果，适中
+]
 
-RENT = 500
+cate_quantity = defaultdict(int)
+
+for i in range(N_GOODS):
+    cate = GOODS_LIST[i]["cate"]
+    qty = QUANTITY_LIST[i]
+    cate_quantity[cate] += qty
+
+# 计算总库存
+total_qty = sum(QUANTITY_LIST)
+
+# 按比例归一化
+CATE_RATIO = {cate: round(qty / total_qty, 6) for cate, qty in cate_quantity.items()}
+
+RENT = 1000
 LOSS_RATE = 0.1
 DEPRECIATION_RATE = 0.6

@@ -1,6 +1,7 @@
-from settings import N_GOODS, MAX_TOTAL_INVENTORY, GOODS_LIST, RENT, LOSS_RATE, DEPRECIATION_RATE, INITIAL_ITEM_NUMBER
+from settings import CATE_RATIO, N_GOODS, MAX_TOTAL_INVENTORY, GOODS_LIST, RENT, LOSS_RATE, DEPRECIATION_RATE, INITIAL_ITEM_NUMBER
 import random
 from order_manager import OrderManager
+
 
 class ShopEnv:
     """
@@ -17,8 +18,15 @@ class ShopEnv:
 
     def reset(self):
         self.cash = 10000
+        print(CATE_RATIO)
         self.inventory = [INITIAL_ITEM_NUMBER for _ in range(self.n_goods)]
-        self.order_manager = OrderManager(total_orders=1000, total_amount=10000, min_per_order=5, max_per_order=15)
+        self.order_manager = OrderManager(
+            cate_ratio=CATE_RATIO,
+            total_orders=1000,
+            total_amount=30000,
+            min_per_order=10,
+            max_per_order=50,
+        )
         self.time_left = self.max_time
         self.day = 1
         self.done = False

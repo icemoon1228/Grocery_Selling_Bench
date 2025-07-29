@@ -1,0 +1,379 @@
+{
+  "history": [
+    {
+      "role": "assistant",
+      "content": "🔧 **工具调用信息**：\n[\n  {\n    \"id\": \"call_cd1dc147d91f4dc5b06ca1\",\n    \"name\": \"view_cash\",\n    \"arguments\": {}\n  }\n]"
+    },
+    {
+      "role": "user",
+      "content": "💰 当前现金：￥10000.00"
+    }
+  ],
+  "game_state": {
+    "cash": 10000.0,
+    "inventory": [
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30
+    ],
+    "time_left": 479.0,
+    "day": 1,
+    "orders": [
+      {
+        "order_id": 767,
+        "items": [
+          {
+            "id": 10,
+            "num": 31
+          }
+        ]
+      },
+      {
+        "order_id": 356,
+        "items": [
+          {
+            "id": 2,
+            "num": 10
+          },
+          {
+            "id": 0,
+            "num": 9
+          },
+          {
+            "id": 3,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 742,
+        "items": [
+          {
+            "id": 10,
+            "num": 30
+          }
+        ]
+      },
+      {
+        "order_id": 504,
+        "items": [
+          {
+            "id": 15,
+            "num": 13
+          },
+          {
+            "id": 16,
+            "num": 12
+          },
+          {
+            "id": 17,
+            "num": 12
+          }
+        ]
+      },
+      {
+        "order_id": 662,
+        "items": [
+          {
+            "id": 8,
+            "num": 29
+          }
+        ]
+      },
+      {
+        "order_id": 939,
+        "items": [
+          {
+            "id": 13,
+            "num": 10
+          },
+          {
+            "id": 14,
+            "num": 10
+          },
+          {
+            "id": 12,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 910,
+        "items": [
+          {
+            "id": 12,
+            "num": 17
+          },
+          {
+            "id": 13,
+            "num": 16
+          }
+        ]
+      },
+      {
+        "order_id": 467,
+        "items": [
+          {
+            "id": 17,
+            "num": 9
+          },
+          {
+            "id": 16,
+            "num": 9
+          },
+          {
+            "id": 15,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 181,
+        "items": [
+          {
+            "id": 2,
+            "num": 14
+          },
+          {
+            "id": 3,
+            "num": 14
+          },
+          {
+            "id": 0,
+            "num": 13
+          }
+        ]
+      },
+      {
+        "order_id": 76,
+        "items": [
+          {
+            "id": 3,
+            "num": 32
+          }
+        ]
+      },
+      {
+        "order_id": 433,
+        "items": [
+          {
+            "id": 17,
+            "num": 12
+          },
+          {
+            "id": 16,
+            "num": 12
+          },
+          {
+            "id": 15,
+            "num": 12
+          }
+        ]
+      },
+      {
+        "order_id": 794,
+        "items": [
+          {
+            "id": 9,
+            "num": 11
+          },
+          {
+            "id": 10,
+            "num": 10
+          },
+          {
+            "id": 11,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 172,
+        "items": [
+          {
+            "id": 0,
+            "num": 31
+          }
+        ]
+      },
+      {
+        "order_id": 547,
+        "items": [
+          {
+            "id": 6,
+            "num": 39
+          }
+        ]
+      },
+      {
+        "order_id": 521,
+        "items": [
+          {
+            "id": 15,
+            "num": 12
+          },
+          {
+            "id": 16,
+            "num": 12
+          },
+          {
+            "id": 17,
+            "num": 12
+          }
+        ]
+      },
+      {
+        "order_id": 811,
+        "items": [
+          {
+            "id": 9,
+            "num": 12
+          },
+          {
+            "id": 10,
+            "num": 12
+          },
+          {
+            "id": 11,
+            "num": 11
+          }
+        ]
+      },
+      {
+        "order_id": 822,
+        "items": [
+          {
+            "id": 14,
+            "num": 23
+          }
+        ]
+      },
+      {
+        "order_id": 476,
+        "items": [
+          {
+            "id": 15,
+            "num": 23
+          }
+        ]
+      },
+      {
+        "order_id": 384,
+        "items": [
+          {
+            "id": 0,
+            "num": 10
+          },
+          {
+            "id": 3,
+            "num": 9
+          },
+          {
+            "id": 1,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 349,
+        "items": [
+          {
+            "id": 0,
+            "num": 13
+          },
+          {
+            "id": 1,
+            "num": 12
+          }
+        ]
+      },
+      {
+        "order_id": 591,
+        "items": [
+          {
+            "id": 4,
+            "num": 11
+          },
+          {
+            "id": 6,
+            "num": 11
+          },
+          {
+            "id": 7,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 839,
+        "items": [
+          {
+            "id": 13,
+            "num": 8
+          },
+          {
+            "id": 14,
+            "num": 7
+          },
+          {
+            "id": 12,
+            "num": 7
+          }
+        ]
+      }
+    ],
+    "pending_deliveries": [],
+    "sell_count": 0,
+    "buy_count": 0,
+    "total_asset": 19176.4,
+    "action_stats": {
+      "view_orders": {
+        "total": 0
+      },
+      "buy_goods": {
+        "total": 0,
+        "success": 0,
+        "fail": 0
+      },
+      "sell_order": {
+        "total": 0,
+        "success": 0,
+        "fail": 0
+      },
+      "view_cash": {
+        "total": 1
+      },
+      "view_inventory": {
+        "total": 0
+      },
+      "view_incoming_goods": {
+        "total": 0
+      },
+      "view_goods_price_list": {
+        "total": 0
+      },
+      "wait_time": {
+        "total": 0
+      }
+    }
+  },
+  "args": {
+    "model": "qwen3-32b",
+    "enable_thinking": false
+  }
+}

@@ -1,0 +1,427 @@
+{
+  "history": [
+    {
+      "role": "assistant",
+      "content": "🔧 **工具调用信息**：\n[\n  {\n    \"id\": \"call_23212db9e81a4096b26cc6\",\n    \"name\": \"view_cash\",\n    \"arguments\": {}\n  }\n]"
+    },
+    {
+      "role": "user",
+      "content": "💰 当前现金：￥10000.00"
+    }
+  ],
+  "game_state": {
+    "cash": 10000.0,
+    "inventory": [
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30,
+      30
+    ],
+    "time_left": 479.0,
+    "day": 1,
+    "orders": [
+      {
+        "order_id": 384,
+        "items": [
+          {
+            "id": 3,
+            "num": 10
+          },
+          {
+            "id": 1,
+            "num": 10
+          },
+          {
+            "id": 0,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 376,
+        "items": [
+          {
+            "id": 3,
+            "num": 24
+          }
+        ]
+      },
+      {
+        "order_id": 966,
+        "items": [
+          {
+            "id": 14,
+            "num": 10
+          },
+          {
+            "id": 12,
+            "num": 10
+          },
+          {
+            "id": 13,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 478,
+        "items": [
+          {
+            "id": 2,
+            "num": 11
+          },
+          {
+            "id": 0,
+            "num": 10
+          },
+          {
+            "id": 3,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 429,
+        "items": [
+          {
+            "id": 0,
+            "num": 18
+          },
+          {
+            "id": 1,
+            "num": 18
+          }
+        ]
+      },
+      {
+        "order_id": 649,
+        "items": [
+          {
+            "id": 9,
+            "num": 9
+          },
+          {
+            "id": 11,
+            "num": 9
+          },
+          {
+            "id": 10,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 953,
+        "items": [
+          {
+            "id": 13,
+            "num": 38
+          }
+        ]
+      },
+      {
+        "order_id": 125,
+        "items": [
+          {
+            "id": 16,
+            "num": 10
+          },
+          {
+            "id": 15,
+            "num": 9
+          },
+          {
+            "id": 17,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 822,
+        "items": [
+          {
+            "id": 13,
+            "num": 12
+          },
+          {
+            "id": 12,
+            "num": 11
+          }
+        ]
+      },
+      {
+        "order_id": 712,
+        "items": [
+          {
+            "id": 5,
+            "num": 12
+          },
+          {
+            "id": 7,
+            "num": 11
+          },
+          {
+            "id": 4,
+            "num": 11
+          }
+        ]
+      },
+      {
+        "order_id": 674,
+        "items": [
+          {
+            "id": 10,
+            "num": 11
+          },
+          {
+            "id": 9,
+            "num": 10
+          },
+          {
+            "id": 11,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 669,
+        "items": [
+          {
+            "id": 10,
+            "num": 8
+          },
+          {
+            "id": 11,
+            "num": 8
+          },
+          {
+            "id": 9,
+            "num": 7
+          }
+        ]
+      },
+      {
+        "order_id": 211,
+        "items": [
+          {
+            "id": 1,
+            "num": 27
+          }
+        ]
+      },
+      {
+        "order_id": 352,
+        "items": [
+          {
+            "id": 2,
+            "num": 8
+          },
+          {
+            "id": 0,
+            "num": 8
+          },
+          {
+            "id": 3,
+            "num": 8
+          },
+          {
+            "id": 1,
+            "num": 8
+          }
+        ]
+      },
+      {
+        "order_id": 553,
+        "items": [
+          {
+            "id": 2,
+            "num": 10
+          },
+          {
+            "id": 3,
+            "num": 10
+          },
+          {
+            "id": 0,
+            "num": 10
+          },
+          {
+            "id": 1,
+            "num": 9
+          }
+        ]
+      },
+      {
+        "order_id": 11,
+        "items": [
+          {
+            "id": 16,
+            "num": 30
+          }
+        ]
+      },
+      {
+        "order_id": 909,
+        "items": [
+          {
+            "id": 12,
+            "num": 10
+          },
+          {
+            "id": 14,
+            "num": 10
+          },
+          {
+            "id": 13,
+            "num": 10
+          }
+        ]
+      },
+      {
+        "order_id": 832,
+        "items": [
+          {
+            "id": 14,
+            "num": 26
+          }
+        ]
+      },
+      {
+        "order_id": 735,
+        "items": [
+          {
+            "id": 6,
+            "num": 31
+          }
+        ]
+      },
+      {
+        "order_id": 89,
+        "items": [
+          {
+            "id": 16,
+            "num": 26
+          }
+        ]
+      },
+      {
+        "order_id": 698,
+        "items": [
+          {
+            "id": 11,
+            "num": 16
+          },
+          {
+            "id": 10,
+            "num": 16
+          }
+        ]
+      },
+      {
+        "order_id": 636,
+        "items": [
+          {
+            "id": 9,
+            "num": 28
+          }
+        ]
+      },
+      {
+        "order_id": 700,
+        "items": [
+          {
+            "id": 10,
+            "num": 28
+          }
+        ]
+      },
+      {
+        "order_id": 363,
+        "items": [
+          {
+            "id": 3,
+            "num": 25
+          }
+        ]
+      },
+      {
+        "order_id": 995,
+        "items": [
+          {
+            "id": 13,
+            "num": 12
+          },
+          {
+            "id": 14,
+            "num": 12
+          },
+          {
+            "id": 12,
+            "num": 11
+          }
+        ]
+      },
+      {
+        "order_id": 835,
+        "items": [
+          {
+            "id": 12,
+            "num": 32
+          }
+        ]
+      }
+    ],
+    "pending_deliveries": [],
+    "sell_count": 0,
+    "buy_count": 0,
+    "total_asset": 19176.4,
+    "action_stats": {
+      "view_orders": {
+        "total": 0
+      },
+      "buy_goods": {
+        "total": 0,
+        "success": 0,
+        "fail": 0
+      },
+      "sell_order": {
+        "total": 0,
+        "success": 0,
+        "fail": 0
+      },
+      "view_cash": {
+        "total": 1
+      },
+      "view_inventory": {
+        "total": 0
+      },
+      "view_incoming_goods": {
+        "total": 0
+      },
+      "view_goods_price_list": {
+        "total": 0
+      },
+      "wait_time": {
+        "total": 0
+      }
+    }
+  },
+  "args": {
+    "model": "qwen3-235b-a22b-instruct-2507",
+    "enable_thinking": false
+  }
+}

@@ -255,10 +255,18 @@ def parse_args():
         default="aliyun_qwen3-32b",
         help="使用的模型"
     )
+
+    parser.add_argument(
+        "--enable_thinking",
+        action="store_true",
+        help="是否启用思考模式"
+    )
+
     return parser.parse_args()
 
 def main():
     args = parse_args()
+    print("参数:", args)
     env = ShopEnv()
     obs = env.reset()
     print('游戏开始！当前状态:', obs)
@@ -267,7 +275,7 @@ def main():
     step_count = 1  # 步数编号
 
     timestamp_str = time.strftime('%Y%m%d_%H%M%S')
-    save_dir = Path(f"./game_logs/{timestamp_str}")
+    save_dir = Path(f"./new_game_logs/{timestamp_str}")
     save_dir.mkdir(parents=True, exist_ok=True)
     history_file = save_dir / "history.jsonl"  # 每条写一行的JSON记录
 
@@ -298,7 +306,7 @@ def main():
 
         current_message = (
             [{"role": "system", "content": system_prompt}] +
-            history[-50:] +
+            history[-500:] +
             [{"role": "user", "content": user_prompt}]
         )
 
@@ -311,9 +319,10 @@ def main():
                     model_name=args.model,
                     tools=shop_env_tools,
                     extra_body={
-                        "enable_thinking": True,
+                        "enable_thinking": args.enable_thinking,
                         "top_k": 50,
                     },
+                    seed=42,
                     # stream_options={
                     #     'include_usage': False,
                     # },
@@ -348,7 +357,7 @@ def main():
         new_message = {
             "role": "assistant",
             "content": (
-                f"🧠 **LLM 推理内容**：\n{reasoning_content}\n\n"
+                # f"🧠 **LLM 推理内容**：\n{reasoning_content}\n\n"
                 f"🔧 **工具调用信息**：\n{json.dumps(tool_infos, ensure_ascii=False, indent=2)}"
             )
         }
@@ -374,13 +383,17 @@ def main():
 
             save_message_to_file({
                 'game_state': env._debug_obs(),
-                **new_message
+                **new_message,
             })
 
         save_message_to_file_step(
             {
                 'history': history,
                 'game_state': env._debug_obs(),
+                'args': {
+                    'model': args.model,
+                    'enable_thinking': args.enable_thinking,
+                },
             },
             step_count,
         )
