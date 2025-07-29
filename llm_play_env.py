@@ -1,8 +1,14 @@
+import argparse
 from pathlib import Path
+import random
 import time
 from format import format_game_state, format_game_state_total
-from llm_response import get_llm_response, get_llm_response_tool_call, client
+from llm_response import get_llm_response, get_llm_response_tool_call, client, get_llm_response_tool_call_model_server
 import json
+
+
+## sk-8731fd401be741939f62f46662510509
+
 
 # shop_env_tools: MCP风格工具描述，供LLM tool_call使用
 shop_env_tools = [
@@ -15,7 +21,7 @@ shop_env_tools = [
                 "properties": {},
                 "required": [],
                 "type": "object"
-            }
+            },
         }
     },
     {
@@ -34,7 +40,7 @@ shop_env_tools = [
                                 "id": {"description": "商品id(整数)", "type": "integer"},
                                 "num": {"description": "进货数量", "type": "integer"},
                             },
-                            "required": ["id", "num", "arrive"]
+                            "required": ["id", "num"]
                         }
                     }
                 },
@@ -69,7 +75,7 @@ shop_env_tools = [
                 "properties": {},
                 "required": [],
                 "type": "object"
-            }
+            },
         }
     },
     {
@@ -81,7 +87,7 @@ shop_env_tools = [
                 "properties": {},
                 "required": [],
                 "type": "object"
-            }
+            },
         }
     },
     {
@@ -93,7 +99,7 @@ shop_env_tools = [
                 "properties": {},
                 "required": [],
                 "type": "object"
-            }
+            },
         }
     },
     {
@@ -105,7 +111,7 @@ shop_env_tools = [
                 "properties": {},
                 "required": [],
                 "type": "object"
-            }
+            },
         }
     },
     {
@@ -117,10 +123,9 @@ shop_env_tools = [
                 "type": "object",
                 "properties": {},
                 "required": []
-            }
+            },
         }
     },
-
 ]
 
 from settings import GOODS_LIST
@@ -203,15 +208,57 @@ system_prompt = """你是一个专业的零售店经营管家，专注于帮助�
 你的目标是：根据上下文与工具状态判断当前最优操作，并推动任务向长期收益最大化的方向稳步前进。
 """
 
-user_prompt_template = f"""你是门店的智能经营管家，请根据过去的经营历史与当前的门店状态, 判断当前应执行的最优操作：
+user_prompt_template = """你是门店的智能经营管家，请根据以下门店状态，判断当前最优的经营操作，并**务必调用一个工具（只能一个）**。
 
 【门店状态】
-{{game_state}}
+{game_state}
 
-请你基于上述信息做出判断，并输出明确、可执行的下一步行动建议。若需要使用工具，请说明用途及调用方式，并且每一次只能调用一次工具。不要输出与任务无关的内容。
+经营规则：
+- 每日房租固定为 ¥500，日终扣除；
+- 所有库存商品每天会有自然损耗；
+- 每天可使用 480 分钟，不同操作耗时不同；
+- **每一步只能调用一个工具，且必须调用，不能跳过或省略。**
+
+你的任务：
+
+👉 第一步：必须调用一个工具。请严格使用以下格式输出工具调用内容（不要添加其他文字）：
+<tool_call>
+{{
+  "name": "工具名称（字符串，例如 view_inventory）",
+  "arguments": 参数对象（如无参数请写 {{}}）
+}}
+</tool_call>
+
+👉 第二步：工具调用完成后，再补充一段解释，说明你为什么选择这个操作，分析当前状态、后续建议等。
+
+⚠️ 注意：
+- 工具调用必须以 <tool_call> 开始，并以 </tool_call> 结束；
+- 如果不符合格式，系统将认为你未完成任务；
+- 工具列表请参考系统提供内容（如进货、售出、查看库存等）；
+- 请勿输出多次工具调用，也不得跳过。
+
+现在请你完成本轮决策，先输出一个工具调用，然后给出你的理由。
 """
 
+
+def parse_args():
+    """
+    解析命令行参数
+    :return: 解析后的参数对象
+    """
+    parser = argparse.ArgumentParser(description="解答智能体")
+
+    # 添加参数
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="aliyun_qwen3-32b",
+        help="使用的模型"
+    )
+    return parser.parse_args()
+
 def main():
+    args = parse_args()
     env = ShopEnv()
     obs = env.reset()
     print('游戏开始！当前状态:', obs)
@@ -238,9 +285,9 @@ def main():
         except Exception as e:
             print(f"❌ 写入 {file_path} 失败: {e}")
 
-    while not env.done and env.day < 15:
-        # history_text = "\n".join([f"[{msg['role']}]: {msg['content']}" for msg in history[-50:]])
+    MAX_RETRY = 3
 
+    while not env.done and env.day < 30:
         obs, _, _ = env._get_obs(), env.done, {}
 
         game_state = format_game_state(obs, GOODS_LIST)
@@ -251,17 +298,52 @@ def main():
 
         current_message = (
             [{"role": "system", "content": system_prompt}] +
-            history[:50] +
+            history[-50:] +
             [{"role": "user", "content": user_prompt}]
         )
 
-        reasoning_content, answer_content, tool_infos = get_llm_response_tool_call(
-            client,
-            messages=current_message,
-            stream=True,
-            model_name="qwen3-32b",
-            tools=shop_env_tools,
-        )
+        for retry_i in range(MAX_RETRY):
+            try:
+                reasoning_content, answer_content, tool_infos = get_llm_response_tool_call(
+                    client,
+                    messages=current_message,
+                    stream=True,
+                    model_name=args.model,
+                    tools=shop_env_tools,
+                    extra_body={
+                        "enable_thinking": True,
+                        "top_k": 50,
+                    },
+                    # stream_options={
+                    #     'include_usage': False,
+                    # },
+                    temperature=0.9,
+                    top_p=0.9,
+                )
+
+                if len(tool_infos) == 0:
+                    raise Exception("没有进行正确格式的工具调用!")
+
+                break  # 成功就跳出 retry 循环
+            except Exception as e:
+                print(f"⚠️ 第 {retry_i+1} 次调用 LLM 失败：{e}")
+                if retry_i == MAX_RETRY - 1:
+                    print("❌ 达到最大重试次数，跳过本步")
+                    reasoning_content = "调用LLM失败"
+                    answer_content = ""
+                    tool_infos = []
+                    break
+
+        # reasoning_content, answer_content, tool_infos = get_llm_response_tool_call(
+        #     client,
+        #     messages=current_message,
+        #     stream=True,
+        #     model_name="qwen3-32b",
+        #     tools=shop_env_tools,
+        # )
+
+        if len(tool_infos) == 0:
+            continue
 
         new_message = {
             "role": "assistant",
@@ -274,7 +356,7 @@ def main():
         history.append(new_message)
 
         save_message_to_file({
-            # 'game_state': format_game_state_total(env._debug_obs(), GOODS_LIST),
+            'game_state': env._debug_obs(),
             **new_message
         })
 
@@ -291,11 +373,17 @@ def main():
             history.append(new_message)
 
             save_message_to_file({
-                # 'game_state': format_game_state_total(env._debug_obs(), GOODS_LIST),
+                'game_state': env._debug_obs(),
                 **new_message
             })
 
-        save_message_to_file_step(history, step_count)
+        save_message_to_file_step(
+            {
+                'history': history,
+                'game_state': env._debug_obs(),
+            },
+            step_count,
+        )
 
         step_count += 1
 
@@ -303,4 +391,5 @@ def main():
 
 
 if __name__ == '__main__':
+    random.seed(42)  # 设置全局随机种子
     main() 

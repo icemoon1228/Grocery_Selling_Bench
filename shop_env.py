@@ -13,15 +13,6 @@ class ShopEnv:
         self.n_goods = N_GOODS
         self.max_total_inventory = MAX_TOTAL_INVENTORY
         self.day = 1
-        self.cash = 10000
-        self.inventory = [INITIAL_ITEM_NUMBER for _ in range(self.n_goods)]
-        self.order_manager = OrderManager(total_orders=1000, total_amount=10000, min_per_order=5, max_per_order=15)
-        self.time_left = self.max_time
-        self.day = 1
-        self.done = False
-        self.today_orders = self.get_today_order()
-        self.pending_deliveries = []
-        self.buy_order_counter = 1 
         self.reset()
 
     def reset(self):
@@ -33,8 +24,22 @@ class ShopEnv:
         self.done = False
         self.today_orders = self.get_today_order()
         self.pending_deliveries = []
-        self.buy_order_counter = 1 
+        self.buy_order_counter = 0
+        self.sell_order_count = 0
+        self._init_action_stats()
         return self._get_obs()
+
+    def _init_action_stats(self):
+        self.action_stats = {
+            'view_orders': {'total': 0},
+            'buy_goods': {'total': 0, 'success': 0, 'fail': 0},
+            'sell_order': {'total': 0, 'success': 0, 'fail': 0},
+            'view_cash': {'total': 0},
+            'view_inventory': {'total': 0},
+            'view_incoming_goods': {'total': 0},
+            'view_goods_price_list': {'total': 0},
+            'wait_time': {'total': 0},
+        }
 
     def step(self, action, params=None):
         if self.done:
@@ -58,6 +63,16 @@ class ShopEnv:
             action_res = self._view_goods_price_list()
         elif action == 'wait_time':
             action_res = self._wait_time()
+
+        self.action_stats[action]['total'] += 1
+
+        if isinstance(action_res, dict) and 'status' in action_res:
+            if action_res['status'] == 'success':
+                self.action_stats[action]['success'] += 1
+            else:
+                self.action_stats[action]['fail'] += 1
+
+
         if self.time_left <= 0:
             self._settle_day()
             self.time_left = self.max_time
@@ -182,6 +197,8 @@ class ShopEnv:
 
         self.today_orders.remove(order)
 
+        self.sell_order_count += 1
+
         return {
             'status': 'success'
         }
@@ -207,7 +224,7 @@ class ShopEnv:
     def _settle_day(self):
         self.cash -= RENT
         for i in range(self.n_goods):
-            loss = int(self.inventory[i] * LOSS_RATE)
+            loss = self.inventory[i] * LOSS_RATE
             self.inventory[i] -= loss
 
         # 处理到货
@@ -244,6 +261,12 @@ class ShopEnv:
         ] 
 
     def _debug_obs(self):
+        inventory_value = sum(
+            self.inventory[i] * GOODS_LIST[i]['buy_price']
+            for i in range(self.n_goods)
+        )
+        total_asset = self.cash + inventory_value
+
         return {
             'cash': float(self.cash),
             'inventory': self.inventory[:],
@@ -251,4 +274,8 @@ class ShopEnv:
             'day': self.day,
             'orders': self.today_orders,
             'pending_deliveries': self.pending_deliveries,
+            'sell_count': self.sell_order_count,
+            'buy_count': self.buy_order_counter,
+            'total_asset': total_asset,
+            'action_stats': self.action_stats,
         }

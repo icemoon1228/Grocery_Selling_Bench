@@ -1,8 +1,12 @@
 import configparser
+from email import message
 from openai import OpenAI
 import time
 import json
 import requests
+from openai import APIError, OpenAIError
+
+from llm_call import geneClassQuest_byRM
 
 idealab_config = configparser.ConfigParser()
 idealab_config.read('config/idealab.ini', encoding='utf-8')
@@ -48,7 +52,6 @@ def get_llm_response(client, prompt=None, messages=None, system_prompt="You are 
         return ''.join(collected).strip()
 
 import json
-
 def get_llm_response_tool_call(
     client,
     messages=None,
@@ -59,75 +62,91 @@ def get_llm_response_tool_call(
     if not messages:
         return "", "", []
 
-    completion = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        stream=stream,
-        **kwargs
-    )
+    try:
+        completion = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            stream=stream,
+            **kwargs
+        )
+    except (APIError, OpenAIError) as e:
+        print(f"❌ API 请求失败：{e}")
+        return "", "", []
+    except Exception as e:
+        print(f"❌ 未知错误：{e}")
+        return "", "", []
 
     reasoning_content = ""
     answer_content = ""
     tool_info = []
-    is_answering = False
+
+    def ensure_tool_slot(index):
+        while len(tool_info) <= index:
+            tool_info.append({"id": "", "name": "", "arguments": ""})
+
+    def parse_tool_calls(tool_calls):
+        for tool_call in tool_calls:
+            index = getattr(tool_call, "index", 0)
+            ensure_tool_slot(index)
+
+            if getattr(tool_call, "id", None):
+                tool_info[index]["id"] += tool_call.id
+
+            func = getattr(tool_call, "function", None)
+            if func:
+                if getattr(func, "name", None):
+                    tool_info[index]["name"] += func.name
+                if getattr(func, "arguments", None):
+                    tool_info[index]["arguments"] += func.arguments
 
     if stream:
-        for chunk in completion:
-            if not chunk.choices:
-                continue
+        try:
+            for chunk in completion:
+                try:
+                    if not hasattr(chunk, "choices") or not chunk.choices:
+                        continue
+                    delta = chunk.choices[0].delta
 
-            delta = chunk.choices[0].delta
+                    # 内容片段
+                    if hasattr(delta, 'reasoning_content') and delta.reasoning_content is not None:
+                        reasoning_content += delta.reasoning_content
+                    elif hasattr(delta, "content") and delta.content is not None:
+                        answer_content += delta.content
 
-            # 推理内容
-            if hasattr(delta, 'reasoning_content') and delta.reasoning_content is not None:
-                reasoning_content += delta.reasoning_content
+                    # 工具调用
+                    if hasattr(delta, "tool_calls") and delta.tool_calls:
+                        parse_tool_calls(delta.tool_calls)
 
-            # 普通回答内容
-            elif delta.content is not None:
-                is_answering = True
-                answer_content += delta.content
-
-            # 工具调用
-            if delta.tool_calls is not None:
-                for tool_call in delta.tool_calls:
-                    index = tool_call.index
-                    while len(tool_info) <= index:
-                        tool_info.append({"id": "", "name": "", "arguments": ""})
-
-                    if tool_call.id:
-                        tool_info[index]["id"] += tool_call.id
-                    if tool_call.function and tool_call.function.name:
-                        tool_info[index]["name"] += tool_call.function.name
-                    if tool_call.function and tool_call.function.arguments:
-                        tool_info[index]["arguments"] += tool_call.function.arguments
-
+                except Exception as e:
+                    print(f"⚠️ 流式 chunk 解析失败: {e}")
+        except Exception as e:
+            print(f"❌ 流式响应异常：{e}")
+            return "", "", []
     else:
-        choice = completion.choices[0]
-        if hasattr(choice.message, 'reasoning_content'):
-            reasoning_content = choice.message.reasoning_content
-        answer_content = choice.message.content
+        try:
+            choice = completion.choices[0]
+            reasoning_content = getattr(choice.message, "reasoning_content", "")
+            answer_content = getattr(choice.message, "content", "")
 
-        if choice.message.tool_calls is not None:
-            for tool_call in choice.message.tool_calls:
-                index = tool_call.index
-                while len(tool_info) <= index:
-                    tool_info.append({"id": "", "name": "", "arguments": ""})
+            if getattr(choice.message, "tool_calls", None):
+                parse_tool_calls(choice.message.tool_calls)
 
-                if tool_call.id:
-                    tool_info[index]["id"] = tool_call.id
-                if tool_call.function and tool_call.function.name:
-                    tool_info[index]["name"] = tool_call.function.name
-                if tool_call.function and tool_call.function.arguments:
-                    tool_info[index]["arguments"] = tool_call.function.arguments
+        except Exception as e:
+            print(f"❌ 非流响应解析失败: {e}")
+            return "", "", []
 
-    # 尝试解析 arguments 为 dict，失败则跳过该 tool_call
+    # 解析工具调用参数
     parsed_tool_info = []
     for i, t in enumerate(tool_info):
-        try:
-            parsed_args = json.loads(t.get("arguments", "{}"))
-        except json.JSONDecodeError as e:
-            print(f"⚠️ tool_call[{i}] 参数解析失败: {e}\n内容为: {t.get('arguments')}")
-            continue  # 跳过非法 tool_call
+        arguments = t.get("arguments", {})
+        if isinstance(arguments, str):
+            try:
+                parsed_args = json.loads(arguments)
+            except json.JSONDecodeError as e:
+                print(f"⚠️ tool_call[{i}] 参数解析失败: {e}\n原始内容: {arguments}")
+                continue
+        else:
+            parsed_args = arguments
 
         parsed_tool_info.append({
             "id": t.get("id", ""),
@@ -135,8 +154,43 @@ def get_llm_response_tool_call(
             "arguments": parsed_args,
         })
 
-    return reasoning_content, answer_content, parsed_tool_info
+    # 返回推理内容、答案内容、工具调用信息
+    final_content = reasoning_content or answer_content
+    return final_content, reasoning_content, parsed_tool_info
 
+def get_llm_response_tool_call_model_server(
+    messages=None,
+    model_name='aliyun_qwen3-32b',
+    stream=False,
+    tools=[],
+    **kwargs,
+):
+    qest_generator = geneClassQuest_byRM()
+
+    response = qest_generator.predict_via_modelserver(
+        messages=messages,
+        model=model_name,
+        stream=stream,
+        is_local=True,
+        params={"tools": tools},
+        **kwargs,
+    )
+
+    response = response[0]
+
+    reasoning_content = response['output']['reasoning_content']
+
+    tool_calls = [item['function'] for item in response['output']['tool_calls']]
+
+    tool_calls = [
+        {
+            **tool_call,
+            'arguments': json.loads(tool_call['arguments']) if isinstance(tool_call.get('arguments'), str) else tool_call['arguments']
+        }
+        for tool_call in tool_calls
+    ]
+
+    return reasoning_content, '', tool_calls
 
 def main():
     prompt = "What is the capital of France?"

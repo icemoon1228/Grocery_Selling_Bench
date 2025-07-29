@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run llm_play_env.py with deepseek r1 model",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/llm_play_env.py",
+      "args": ["--model", "aliyun_deepseek-r1"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run llm_play_env.py with qwen235b model",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/llm_play_env.py",
+      "args": ["--model", "qwen3-235b-a22b"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run llm_play_env.py with qwen 32b model",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/llm_play_env.py",
+      "args": ["--model", "qwen3-32b"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run llm_play_env.py with qwen-max model",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/llm_play_env.py",
+      "args": ["--model", "qwen-max-latest"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run llm_play_env.py with qwen-plus model",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/llm_play_env.py",
+      "args": ["--model", "aliyun_qwen-plus"],
+      "console": "integratedTerminal"
+    }
+  ]
+}
