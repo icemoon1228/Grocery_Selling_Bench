@@ -28,7 +28,7 @@ shop_env_tools = [
         "type": "function",
         "function": {
             "name": "buy_goods",
-            "description": "进货指定商品。支持批量进货,每个商品需指定商品id、数量。消耗60分钟。",
+            "description": "进货指定商品。支持批量进货,每个商品需指定商品id、数量。消耗20分钟。",
             "parameters": {
                 "properties": {
                     "orders": {
@@ -126,6 +126,18 @@ shop_env_tools = [
             },
         }
     },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "view_history",
+    #         "description": "查看过去所有天数的门店信息记录，供复盘与长期决策使用。消耗10分钟。",
+    #         "parameters": {
+    #                 "properties": {},
+    #                 "required": [],
+    #                 "type": "object"
+    #             },
+    #         }
+    # }
 ]
 
 from settings import GOODS_LIST
@@ -184,12 +196,49 @@ def execute_tool_call_with_output(env, tool_call):
 
     elif name == 'view_goods_price_list':
         result_str = "📦 货品价格列表：\n" + "\n".join(
-            [f"- {item['name']}：进价￥{item['buy_price']:.2f}, 售价￥{item['sell_price']:.2f}" for item in tool_res]
+            [f"- {item['name']}：进价￥{item['current_buy_price']:.2f}, 售价￥{item['current_sell_price']:.2f}" for item in tool_res]
         )
     
     elif name == 'wait_time':
         result_str = '✅ 已等待时间流逝.'
+    # elif name == 'view_history':
+    #     if not tool_res:
+    #         result_str = "📘 暂无历史记录。"
+    #     else:
+    #         result_str = "📘 历史记录：\n"
+    #         for day_idx, day_obs in enumerate(tool_res, start=1):
+    #             cash = day_obs.get("cash", 0.0)
+    #             inventory = day_obs.get("inventory", [])
+    #             orders = day_obs.get("orders", [])
 
+    #             # 处理库存信息
+    #             if isinstance(inventory, list) and all(isinstance(x, (int, float)) for x in inventory):
+    #                 inventory_summary = ", ".join(
+    #                     f"{GOODS_LIST[i]['name']}:{int(num)}件"
+    #                     for i, num in enumerate(inventory) if num > 0
+    #                 ) or "无库存"
+    #             else:
+    #                 inventory_summary = "库存信息异常"
+
+    #             # 处理订单信息
+    #             if isinstance(orders, list) and orders:
+    #                 order_summary = ""
+    #                 for o in orders:
+    #                     order_id = o.get('order_id', '?')
+    #                     items = o.get('items', [])
+    #                     item_str = "；".join(
+    #                         f"{item['num']}件 {GOODS_LIST[item['id']]['name']}" for item in items
+    #                     )
+    #                     order_summary += f"    - 订单ID {order_id}：{item_str}\n"
+    #             else:
+    #                 order_summary = "    - 无订单记录\n"
+
+    #             result_str += (
+    #                 f"🗓 第{day_idx}天：\n"
+    #                 f"💰 现金：￥{cash:.2f}\n"
+    #                 f"📦 库存：{inventory_summary}\n"
+    #                 f"📋 订单：\n{order_summary}"
+    #             )
     else:
         result_str = f"⚠️ 未知工具调用：{name}"
 
@@ -208,16 +257,22 @@ system_prompt = """你是一个专业的零售店经营管家，专注于帮助�
 你的目标是：根据上下文与工具状态判断当前最优操作，并推动任务向长期收益最大化的方向稳步前进。
 """
 
-user_prompt_template = """你是门店的智能经营管家，请根据以下门店状态，判断当前最优的经营操作，并**务必调用一个工具（只能一个）**。
+user_prompt_template = """请根据以下门店状态，判断最优的经营操作，并**务必调用一个工具（只能一个）**。
+
+【过去经营门店日志】
+{dairies}
 
 【门店状态】
 {game_state}
 
+【今日已执行的操作记录】
+{history_records}
+
 经营规则：
-- 每日房租固定为 ¥500，日终扣除；
+- 每日房租固定为 ¥1000，日终扣除；
 - 所有库存商品每天会有自然损耗；
 - 每天可使用 480 分钟，不同操作耗时不同；
-- **每一步只能调用一个工具，且必须调用，不能跳过或省略。**
+- **如果现金余额为 0 或为负，门店将直接倒闭，游戏失败！你必须时刻关注现金余额，避免倒闭风险。**
 
 你的任务：
 
@@ -229,17 +284,8 @@ user_prompt_template = """你是门店的智能经营管家，请根据以下门
 }}
 </tool_call>
 
-👉 第二步：工具调用完成后，再补充一段解释，说明你为什么选择这个操作，分析当前状态、后续建议等。
-
-⚠️ 注意：
-- 工具调用必须以 <tool_call> 开始，并以 </tool_call> 结束；
-- 如果不符合格式，系统将认为你未完成任务；
-- 工具列表请参考系统提供内容（如进货、售出、查看库存等）；
-- 请勿输出多次工具调用，也不得跳过。
-
 现在请你完成本轮决策，先输出一个工具调用，然后给出你的理由。
 """
-
 
 def parse_args():
     """
@@ -279,11 +325,19 @@ def main():
     save_dir.mkdir(parents=True, exist_ok=True)
     history_file = save_dir / "history.jsonl"  # 每条写一行的JSON记录
 
-    def save_message_to_file(msg):
-        with open(history_file, "a", encoding="utf-8") as f:
-            json_str = json.dumps(msg, ensure_ascii=False, indent=2)  # 加 indent
-            f.write(json_str + "\n\n")  # 分隔每条记录，便于阅读
-            f.write("\n")  # 每条记录占一行
+
+    def save_message_to_file(msg, filename=None):
+        if filename is None:
+            with open(history_file, "a", encoding="utf-8") as f:
+                json_str = json.dumps(msg, ensure_ascii=False, indent=2)  # 加 indent
+                f.write(json_str + "\n\n")  # 分隔每条记录，便于阅读
+                f.write("\n")  # 每条记录占一行
+        else:
+            with open(save_dir / filename, "a", encoding="utf-8") as f:
+                json_str = json.dumps(msg, ensure_ascii=False, indent=2)  # 加 indent
+                f.write(json_str + "\n\n")  # 分隔每条记录，便于阅读
+                f.write("\n")  # 每条记录占一行
+
 
     def save_message_to_file_step(msg, step):
         file_path = save_dir / f"step_{step:03d}.json"
@@ -295,6 +349,8 @@ def main():
 
     MAX_RETRY = 3
 
+    current_day = env.day
+
     while not env.done and env.day < 30:
         obs, _, _ = env._get_obs(), env.done, {}
 
@@ -302,17 +358,23 @@ def main():
 
         print(f"当前游戏状态: {game_state}")
 
-        user_prompt = user_prompt_template.format(game_state=game_state)
+        formatted_history = "\n".join([f"{m['role']}: {m['content']}" for m in history])
+
+        user_prompt = user_prompt_template.format(
+            game_state=game_state,
+            dairies=env.format_history(),
+            history_records=formatted_history
+        )
 
         current_message = (
             [{"role": "system", "content": system_prompt}] +
-            history[-500:] +
+            # history +
             [{"role": "user", "content": user_prompt}]
         )
 
         for retry_i in range(MAX_RETRY):
             try:
-                reasoning_content, answer_content, tool_infos = get_llm_response_tool_call(
+                reasoning_content, _, tool_infos = get_llm_response_tool_call(
                     client,
                     messages=current_message,
                     stream=True,
@@ -343,13 +405,23 @@ def main():
                     tool_infos = []
                     break
 
-        # reasoning_content, answer_content, tool_infos = get_llm_response_tool_call(
-        #     client,
-        #     messages=current_message,
-        #     stream=True,
-        #     model_name="qwen3-32b",
-        #     tools=shop_env_tools,
-        # )
+        reasoning_content, answer_content, tool_infos = get_llm_response_tool_call(
+            client,
+            messages=current_message,
+            stream=True,
+            model_name="qwen3-32b",
+            tools=shop_env_tools,
+        )
+
+        save_message_to_file(
+            {
+                'reasoning_content': reasoning_content,
+                'answer_content': answer_content,
+                'tool_infos': tool_infos[0] if len(tool_infos) > 0 else '',
+                'message': current_message,
+            },
+            f"{step_count + 1}_llm_call_and_response.json"
+        )
 
         if len(tool_infos) == 0:
             continue
@@ -362,11 +434,16 @@ def main():
             )
         }
 
-        history.append(new_message)
+        if env.day == current_day:
+            history.append(new_message)
+        else:
+            history = []
+            current_day = env.day
 
         save_message_to_file({
             'game_state': env._debug_obs(),
-            **new_message
+            'reason_content': reasoning_content,
+            **new_message,
         })
 
         print("LLM推理过程:", reasoning_content)
@@ -379,7 +456,11 @@ def main():
                 "role": "user", "content": result_str,
             }
 
-            history.append(new_message)
+            if env.day == current_day:
+                history.append(new_message)
+            else:
+                history = []
+                current_day = env.day
 
             save_message_to_file({
                 'game_state': env._debug_obs(),

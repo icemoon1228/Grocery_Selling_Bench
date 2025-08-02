@@ -1,7 +1,13 @@
 # 商品常量定义
 from collections import defaultdict
+import random
+from tracemalloc import start
+from price_functions import periodic_price_function, triangle_wave, exponential_fluctuation
+from config import ENABLE_SELL_PRICE_CIRCLE, ENABLE_BUY_PRICE_CIRCLE, ENABLE_REQUIRE_CIRCLE, ENABLE_BUY_REQUIRE_SAME_CIRCLE
 
-
+### 销量上去 ====> 价格上去  进货4-5 天
+## TODO: 过去很重要场景 !销量 价格 ===> 变化 最大库存限制  ===> 订货决策  insight 
+## TODO: 
 GOODS_LIST = [
     {"id": 0, "name": "小麦（中等）", "buy_price": 3.19, "sell_price": 5.9, "cate": "粮食"},
     {"id": 1, "name": "玉米（中等）", "buy_price": 2.52, "sell_price": 4.62, "cate": "粮食"},
@@ -22,6 +28,58 @@ GOODS_LIST = [
     {"id": 16, "name": "香蕉（中等）", "buy_price": 7.5, "sell_price": 15.2, "cate": "水果"},
     {"id": 17, "name": "橙子（中等）", "buy_price": 10.88, "sell_price": 16.4, "cate": "水果"},
 ]
+
+val_functions = [
+    periodic_price_function,
+    triangle_wave,
+    exponential_fluctuation,
+]
+
+# 添加统一的 lambda price_function
+for item in GOODS_LIST:
+    def sell_price_function(obj, base_value=0):
+        day = obj["day"]
+        period = random.randint(5, 9)
+
+        start_position = random.randint(0, period)
+        price_fc = val_functions[random.randint(0, 2)]
+
+        return price_fc(day + start_position, base_value, period)
+
+    def buy_price_function(obj, base_value=0):
+        day = obj["day"]
+        period = random.randint(5, 9)
+        start_position = random.randint(0, period)
+        price_fc = val_functions[random.randint(0, 2)]
+
+        return price_fc(day + start_position, base_value, period)
+
+    def require_function(obj, base_value=0):
+        day = obj["day"]
+        period = random.randint(5, 9)
+        start_position = random.randint(0, period)
+        price_fc = val_functions[random.randint(0, 2)]
+        return price_fc(day + start_position, base_value, period)
+
+    if ENABLE_BUY_PRICE_CIRCLE:
+        item["sell_price_function"] = lambda obj: round(sell_price_function(obj, base_value=item["sell_price"]), 2) 
+    else:
+        item["sell_price_function"] = lambda obj: item["sell_price"]
+    
+    if ENABLE_SELL_PRICE_CIRCLE:
+        item["buy_price_function"] = lambda obj: round(buy_price_function(obj, base_value=item["buy_price"]), 2) 
+    else:
+        item["buy_price_function"] = lambda obj: item["buy_price"]
+
+    if ENABLE_REQUIRE_CIRCLE:
+        item["require_function"] = lambda obj: round(require_function(obj, base_value=1), 2)
+    else:
+        item["require_function"] = lambda obj: 1
+
+    if ENABLE_BUY_REQUIRE_SAME_CIRCLE:
+        item["require_function"] = lambda obj: round(sell_price_function(obj, base_value=1), 2) 
+        item["sell_price_function"] = lambda obj: round(sell_price_function({"day": obj["day"] + 2, **obj}, base_value=item["sell_price"]), 2) 
+
 N_GOODS = len(GOODS_LIST)
 MAX_TOTAL_INVENTORY = 1000  # 所有商品共享的最大库存总量 
 INITIAL_ITEM_NUMBER = 30
@@ -47,18 +105,7 @@ QUANTITY_LIST = [
     170   # 橙子 - 应季水果，适中
 ]
 
-cate_quantity = defaultdict(int)
-
-for i in range(N_GOODS):
-    cate = GOODS_LIST[i]["cate"]
-    qty = QUANTITY_LIST[i]
-    cate_quantity[cate] += qty
-
-# 计算总库存
-total_qty = sum(QUANTITY_LIST)
-
 # 按比例归一化
-CATE_RATIO = {cate: round(qty / total_qty, 6) for cate, qty in cate_quantity.items()}
 
 RENT = 1000
 LOSS_RATE = 0.1
