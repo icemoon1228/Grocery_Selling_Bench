@@ -1,27 +1,59 @@
 def format_goods_list(goods_list):
     lines = ["【商品列表】每项包括：编号｜名称｜进价｜售价｜类别"]
     for item in goods_list:
-        line = f"{item['id']:>2}｜{item['name']}｜进价：{item['buy_price']}｜售价：{item['sell_price']}｜{item['cate']}"
+        line = f"{item['id']:>2}｜{item['name']}｜当日进价：{item['current_buy_price']:.2f}｜当日售价：{item['current_sell_price']:.2f}｜{item['cate']}"
         lines.append(line)
     return "\n".join(lines)
 
 def format_game_state(obs, goods_list):
-    # cash = obs['cash']
+    cash = obs['cash']
     time_left = obs['time_left']
     day = obs['day']
-    # inventory = obs['inventory']
+    inventory = obs['inventory']
+    orders = obs.get('orders', [])
+    pending_deliveries = obs.get('pending_deliveries', [])
+    goods_list = obs.get('goods_list', [])
 
-    # inventory_lines = ["【当前库存】每项包括：编号｜名称｜库存数量"]
-    # for i, qty in enumerate(inventory):
-    #     name = goods_list[i]['name']
-    #     inventory_lines.append(f"{i:>2}｜{name}｜{qty}件")
+
+    inventory_lines = ["【当前库存】每项包括：编号｜名称｜库存数量"]
+    for i, qty in enumerate(inventory):
+        name = goods_list[i]['name']
+        inventory_lines.append(f"{i:.2f}｜{name}｜{qty}件")
+
+    order_lines = ["【客户订单】订单ID｜商品名称×数量"]
+    if orders:
+        for o in orders:
+            order_id = o['order_id']
+            items_str = "，".join([
+                f"{goods_list[item['id']]['name']}×{item['num']}" for item in o['items']
+            ])
+            order_lines.append(f"{order_id}｜{items_str}")
+    else:
+        order_lines.append("暂无客户订单。")
+
+    # 待收货订单（简略）
+    delivery_lines = ["【待收货订单】预计到货日｜商品名称×数量"]
+    if pending_deliveries:
+        for d in pending_deliveries:
+            arrival_day = d['arrival_day']
+            goods_str = "，".join([
+                f"{goods_list[i]['name']}×{qty}" for i, qty in enumerate(d['goods']) if qty > 0
+            ])
+            delivery_lines.append(f"第 {arrival_day} 天｜{goods_str}")
+    else:
+        delivery_lines.append("暂无待收货订单。")
+
+    goods_list_lines = format_goods_list(goods_list)
 
     return (
         f"【当前游戏状态】\n"
         f"- 第 {day} 天\n"
-        # f"- 当前资金：￥{cash:.2f}\n"
+        f"- 当前资金：￥{cash:.2f}\n"
         f"- 剩余时间：{time_left:.1f} 分钟\n"
-        # + "\n".join(inventory_lines)
+        + "\n".join(inventory_lines) + "\n\n"
+        + "\n".join(order_lines) + "\n\n"
+        + "\n".join(delivery_lines) + "\n\n"
+        + goods_list_lines + "\n\n"
     )
 
 def format_game_state_total(obs, goods_list):

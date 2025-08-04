@@ -12,23 +12,23 @@ import json
 
 # shop_env_tools: MCP风格工具描述，供LLM tool_call使用
 shop_env_tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "view_orders",
-            "description": "查看当前所有订单信息，消耗10分钟。",
-            "parameters": {
-                "properties": {},
-                "required": [],
-                "type": "object"
-            },
-        }
-    },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "view_orders",
+    #         "description": "查看当前所有订单信息，消耗10分钟。",
+    #         "parameters": {
+    #             "properties": {},
+    #             "required": [],
+    #             "type": "object"
+    #         },
+    #     }
+    # },
     {
         "type": "function",
         "function": {
             "name": "buy_goods",
-            "description": "进货指定商品。支持批量进货,每个商品需指定商品id、数量。消耗20分钟。",
+            "description": "进货指定商品。支持批量进货,每个商品需指定商品id、数量。消耗60分钟。",
             "parameters": {
                 "properties": {
                     "orders": {
@@ -66,54 +66,54 @@ shop_env_tools = [
             }
         }
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "view_inventory",
-            "description": "查看当前库存状况, 展示所有商品的库存数量。消耗20分钟。",
-            "parameters": {
-                "properties": {},
-                "required": [],
-                "type": "object"
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "view_cash",
-            "description": "查看当前剩余的现金。消耗1分钟。",
-            "parameters": {
-                "properties": {},
-                "required": [],
-                "type": "object"
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "view_incoming_goods",
-            "description": "查看所有尚未到货的进货订单，包括商品id、数量、预计到货时间。消耗5分钟。",
-            "parameters": {
-                "properties": {},
-                "required": [],
-                "type": "object"
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "view_goods_price_list",
-            "description": "查看所有商品的基本信息，包括名称、进价、售价和类别。用于分析利润空间。",
-            "parameters": {
-                "properties": {},
-                "required": [],
-                "type": "object"
-            },
-        }
-    },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "view_inventory",
+    #         "description": "查看当前库存状况, 展示所有商品的库存数量。消耗20分钟。",
+    #         "parameters": {
+    #             "properties": {},
+    #             "required": [],
+    #             "type": "object"
+    #         },
+    #     }
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "view_cash",
+    #         "description": "查看当前剩余的现金。消耗1分钟。",
+    #         "parameters": {
+    #             "properties": {},
+    #             "required": [],
+    #             "type": "object"
+    #         },
+    #     }
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "view_incoming_goods",
+    #         "description": "查看所有尚未到货的进货订单，包括商品id、数量、预计到货时间。消耗5分钟。",
+    #         "parameters": {
+    #             "properties": {},
+    #             "required": [],
+    #             "type": "object"
+    #         },
+    #     }
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "view_goods_price_list",
+    #         "description": "查看所有商品的基本信息，包括名称、进价、售价和类别。用于分析利润空间。",
+    #         "parameters": {
+    #             "properties": {},
+    #             "required": [],
+    #             "type": "object"
+    #         },
+    #     }
+    # },
     {
         "type": "function",
         "function": {
@@ -190,7 +190,7 @@ def execute_tool_call_with_output(env, tool_call):
 
     elif name == 'sell_order':
         if tool_res['status'] == 'success':
-            result_str = f"✅ 已售出订单 ID {arguments.get('order_id')}。"
+            result_str = f"✅ 已售出订单 ID {arguments.get('order_id')}, 收银 {tool_res['meta']['money']:.2f}元"
         else:
             result_str = f"❌ 售出订单 ID {arguments.get('order_id')} 失败, 原因为{tool_res['reason']}。"
 
@@ -269,14 +269,14 @@ user_prompt_template = """请根据以下门店状态，判断最优的经营操
 {history_records}
 
 经营规则：
-- 每日房租固定为 ¥1000，日终扣除；
+- 每日房租固定为 ¥2000，日终扣除；
 - 所有库存商品每天会有自然损耗；
 - 每天可使用 480 分钟，不同操作耗时不同；
 - **如果现金余额为 0 或为负，门店将直接倒闭，游戏失败！你必须时刻关注现金余额，避免倒闭风险。**
 
 你的任务：
 
-👉 第一步：必须调用一个工具。请严格使用以下格式输出工具调用内容（不要添加其他文字）：
+当调用工具的时候，请严格使用以下格式输出工具调用内容：
 <tool_call>
 {{
   "name": "工具名称（字符串，例如 view_inventory）",
@@ -284,7 +284,7 @@ user_prompt_template = """请根据以下门店状态，判断最优的经营操
 }}
 </tool_call>
 
-现在请你完成本轮决策，先输出一个工具调用，然后给出你的理由。
+现在请你完成本轮决策。
 """
 
 def parse_args():

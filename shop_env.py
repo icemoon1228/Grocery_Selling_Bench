@@ -33,13 +33,18 @@ class ShopEnv:
 
         self._init_action_stats()
         self.history = []
+        self.today_actions = []
         return self._get_obs()
 
 
     def update_goods_state_by_day(self, day):
         today_supply = []
         for g in GOODS_LIST:
-            ctx = {"day": day}
+            ctx = {
+                "day": day,
+                "sell_price": g['sell_price'],
+                "buy_price": g['buy_price']
+            }
             g["current_buy_price"] = g["buy_price_function"](ctx)
             g["current_sell_price"] = g["sell_price_function"](ctx)
             g["today_supply_strength"] = g["require_function"](ctx)
@@ -63,6 +68,8 @@ class ShopEnv:
         self.today_orders = self.order_manager.pop(self.supply_count)
 
         self.today_total_order = self.today_orders.copy()
+
+        self.today_actions = []
 
     def _init_action_stats(self):
         self.action_stats = {
@@ -104,6 +111,12 @@ class ShopEnv:
 
         self.action_stats[action]['total'] += 1
 
+        self.today_actions.append({
+            'action': action,
+            'params': params,
+            'result': action_res,
+        })
+
         if isinstance(action_res, dict) and 'status' in action_res:
             if action_res['status'] == 'success':
                 self.action_stats[action]['success'] += 1
@@ -134,7 +147,7 @@ class ShopEnv:
     def _get_time_cost(self, action):
         time_costs = {
             'view_orders': 10,
-            'buy_goods': 20,
+            'buy_goods': 60,
             'sell_order': 10,
             'view_cash': 1,
             'view_inventory': 20,
@@ -167,7 +180,7 @@ class ShopEnv:
         order_id = self.buy_order_counter
         self.buy_order_counter += 1
 
-        delay = random.randint(3, 5)
+        delay = random.randint(2, 3)
         arrival_day = self.day + delay
         self.pending_deliveries.append({
             'order_id': order_id,
@@ -196,14 +209,22 @@ class ShopEnv:
             num = item['num']
             if self.inventory[gid] < num:
                 return {'status': 'failed', 'reason': '库存不足'}
+
+        money = 0
         for item in order['items']:
             gid = item['id']
             num = item['num']
             self.inventory[gid] -= num
             self.cash += GOODS_LIST[gid]['current_sell_price'] * num
+            money += GOODS_LIST[gid]['current_sell_price'] * num
         self.today_orders.remove(order)
         self.sell_order_count += 1
-        return {'status': 'success'}
+        return {
+            'status': 'success',
+            'meta': {
+                'money': money,
+            },
+        }
 
     
     def _settle_day(self):
@@ -225,7 +246,10 @@ class ShopEnv:
         self.history.append({
             **self._debug_obs(),
             'orders': self.today_total_order,
+            'actions': self.today_actions,
         })
+
+
 
     def _wait_time(self, params=None):
         return {}
@@ -267,9 +291,60 @@ class ShopEnv:
 
 
     def _get_obs(self):
+        goods_list = [
+            {
+                'id': goods['id'],
+                'name': goods['name'],
+                'current_buy_price': goods['current_buy_price'],
+                'current_sell_price': goods['current_sell_price'],
+                'cate': goods['cate'],
+            }
+            for goods in GOODS_LIST
+        ]
+
         return {
             'time_left': float(self.time_left),
             'day': self.day,
+            'cash': float(self.cash),
+            'inventory': self.inventory[:],
+            'pending_deliveries': self.pending_deliveries,
+            'orders': self.today_orders,
+            'goods_list': goods_list,
+        }
+    def _compute_order_profits(self, goods_list, orders):
+        goods_price_map = {
+            goods['id']: {
+                'buy': goods['current_buy_price'],
+                'sell': goods['current_sell_price'],
+                'name': goods['name']
+            }
+            for goods in goods_list
+        }
+
+        order_profits = []
+        for order in orders:
+            profit = 0.0
+            for item in order['items']:
+                goods_id = item['id']
+                quantity = item['num']
+                prices = goods_price_map.get(goods_id)
+
+                if prices is None:
+                    continue  # 商品未找到，跳过
+
+                buy_price = prices['buy']
+                sell_price = prices['sell']
+                profit += (sell_price - buy_price) * quantity
+
+            order_profits.append(profit)
+
+        total_profit = sum(order_profits)
+        avg_profit = total_profit / len(order_profits) if order_profits else 0.0
+
+        return {
+            'per_order_profits': order_profits,
+            'total_profit': total_profit,
+            'avg_profit': avg_profit
         }
 
     def _debug_obs(self):
@@ -296,16 +371,20 @@ class ShopEnv:
             'inventory': self.inventory[:],
             'time_left': float(self.time_left),
             'day': self.day,
-            'orders': self.today_orders,
+            'orders': self.today_total_order,
             'pending_deliveries': self.pending_deliveries,
             'sell_count': self.sell_order_count,
             'buy_count': self.buy_order_counter,
             'total_asset': total_asset,
             'action_stats': self.action_stats,
+            'profit': self._compute_order_profits(goods_list=goods_list, orders=self.today_total_order),
         }
 
     # def format_history(self):
     #     lines = []
+
+
+    
     #     for _, snapshot in enumerate(self.history, start=1):
     #         day = snapshot['day']
     #         lines.append(f"=== 第 {day} 天 经营日志 ===")
@@ -411,6 +490,25 @@ class ShopEnv:
                 lines.extend(["  - " + line for line in delivery_strs])
             else:
                 lines.append("  无")
+
+            lines.append("当日操作记录:")
+            if snapshot.get('actions'):
+                for idx, act in enumerate(snapshot['actions'], 1):
+                    act_name = act['action']
+                    act_params = act.get('params')
+                    act_result = act.get('result')
+
+                    lines.append(f"  {idx}. 动作: {act_name}")
+                    if act_params:
+                        lines.append(f"     参数: {act_params}")
+                    if isinstance(act_result, dict):
+                        status = act_result.get('status')
+                        reason = act_result.get('reason', '')
+                        lines.append(f"     结果: {status}" + (f"（{reason}）" if status == 'failed' else ""))
+                    else:
+                        lines.append(f"     结果: {act_result}")
+            else:
+                lines.append("  无操作记录")
 
             lines.append("")  # 空行分隔每天
 

@@ -35,41 +35,41 @@ val_functions = [
     exponential_fluctuation,
 ]
 
+def sell_price_function(obj, base_value=0):
+    day = obj["day"]
+    period = random.randint(8, 10)
+
+    start_position = random.randint(0, period)
+    price_fc = val_functions[random.randint(0, 2)]
+
+    return price_fc(day + start_position, base_value, period)
+
+def buy_price_function(obj, base_value=0):
+    day = obj["day"]
+    period = random.randint(8, 10)
+    start_position = random.randint(0, period)
+    price_fc = val_functions[random.randint(0, 2)]
+
+    return price_fc(day + start_position, base_value, period)
+
+def require_function(obj, base_value=0):
+    day = obj["day"]
+    period = random.randint(8, 10)
+    start_position = random.randint(0, period)
+    price_fc = val_functions[random.randint(0, 2)]
+    return price_fc(day + start_position, base_value, period)
+
 # 添加统一的 lambda price_function
 for item in GOODS_LIST:
-    def sell_price_function(obj, base_value=0):
-        day = obj["day"]
-        period = random.randint(5, 9)
-
-        start_position = random.randint(0, period)
-        price_fc = val_functions[random.randint(0, 2)]
-
-        return price_fc(day + start_position, base_value, period)
-
-    def buy_price_function(obj, base_value=0):
-        day = obj["day"]
-        period = random.randint(5, 9)
-        start_position = random.randint(0, period)
-        price_fc = val_functions[random.randint(0, 2)]
-
-        return price_fc(day + start_position, base_value, period)
-
-    def require_function(obj, base_value=0):
-        day = obj["day"]
-        period = random.randint(5, 9)
-        start_position = random.randint(0, period)
-        price_fc = val_functions[random.randint(0, 2)]
-        return price_fc(day + start_position, base_value, period)
-
     if ENABLE_BUY_PRICE_CIRCLE:
-        item["sell_price_function"] = lambda obj: round(sell_price_function(obj, base_value=item["sell_price"]), 2) 
+        item["sell_price_function"] = lambda obj: round(sell_price_function(obj, base_value=obj["sell_price"]), 2) 
     else:
-        item["sell_price_function"] = lambda obj: item["sell_price"]
+        item["sell_price_function"] = lambda obj: obj["sell_price"]
     
     if ENABLE_SELL_PRICE_CIRCLE:
-        item["buy_price_function"] = lambda obj: round(buy_price_function(obj, base_value=item["buy_price"]), 2) 
+        item["buy_price_function"] = lambda obj: round(buy_price_function(obj, base_value=obj["buy_price"]), 2) 
     else:
-        item["buy_price_function"] = lambda obj: item["buy_price"]
+        item["buy_price_function"] = lambda obj: obj["buy_price"]
 
     if ENABLE_REQUIRE_CIRCLE:
         item["require_function"] = lambda obj: round(require_function(obj, base_value=1), 2)
@@ -78,35 +78,15 @@ for item in GOODS_LIST:
 
     if ENABLE_BUY_REQUIRE_SAME_CIRCLE:
         item["require_function"] = lambda obj: round(sell_price_function(obj, base_value=1), 2) 
-        item["sell_price_function"] = lambda obj: round(sell_price_function({"day": obj["day"] + 2, **obj}, base_value=item["sell_price"]), 2) 
+        item["sell_price_function"] = lambda obj: round(sell_price_function({"day": obj["day"] + 2, **obj}, base_value=obj["sell_price"]), 2) 
 
 N_GOODS = len(GOODS_LIST)
 MAX_TOTAL_INVENTORY = 1000  # 所有商品共享的最大库存总量 
 INITIAL_ITEM_NUMBER = 30
 
-QUANTITY_LIST = [
-    500,  # 小麦（中等） - 主粮，需求大
-    450,  # 玉米（中等） - 主粮，家畜饲料常用
-    300,  # 大豆（中等） - 用途广，但价格较高
-    400,  # 籼米（中等） - 主粮，常用
-    150,  # 猪肉 - 消耗大，保鲜期短
-    60,   # 牛肉 - 单价高，需求相对少
-    60,   # 羊肉 - 同上
-    200,  # 鸡肉 - 性价比高，需求适中
-    250,  # 鸡蛋 - 常用食材，需求大
-    180,  # 草鱼 - 普通海鲜，适中需求
-    120,  # 鲤鱼 - 常见海鲜，适中
-    130,  # 鲢鱼 - 相对廉价，适中
-    300,  # 大白菜 - 冬季常用菜，便宜
-    220,  # 黄瓜 - 应季蔬菜
-    220,  # 西红柿 - 常见日常食材
-    160,  # 红富士苹果 - 水果但相对耐放
-    180,  # 香蕉 - 热门水果，但易坏
-    170   # 橙子 - 应季水果，适中
-]
 
 # 按比例归一化
 
-RENT = 1000
-LOSS_RATE = 0.1
+RENT = 3000
+LOSS_RATE = 0.3
 DEPRECIATION_RATE = 0.6
